@@ -12,11 +12,7 @@ import pygame
 import time
 from mpl_toolkits import mplot3d
 
-
-
-ser = serial.Serial('COM4', 11500)
-
-time.sleep(3)
+    
 # Function to send command to Arduino
 def send_command(axis, angle):
     if angle > 180:
@@ -45,44 +41,7 @@ def bezier_curve(t, P0, P1, P2, P3): #bezier curve for walk
     P0, P1, P2, P3: control points of the Bezier curve
     """
     return (1-t)**3 * P0 + 3*(1-t)**2 * t * P1 + 3*(1-t) * t**2 * P2 + t**3 * P3
-# Define control points
-P0 = np.array([0, 0, 0]) + 50
-P1 = np.array([1, 2, 3]) + 50
-P2 = np.array([2, 3, 1]) + 50
-P3 = np.array([3, 0, 0]) + 50
 
-# Generate points along the Bezier curve
-t_values = np.linspace(0, 1, num=100)  # Parameter values
-points = [bezier_curve(t, P0, P1, P2, P3) for t in t_values]
-
-#%matplotlib notebook LEG INVERSE KINEMATICS:
-
-setupView(110).view_init(elev=20., azim=135)
-
-fig = plt.figure()
-pi= 3.14
-omega =  pi/4
-phi =0
-psi = 0
-
-xm = 0
-ym = 0
-zm = 0
-
-l1=25
-l2=20
-l3=80
-l4=80
-
-L = 120
-W = 90
-
-Lp=np.array([[100,-100,100,1],[100,-100,-100,1],[-100,-100,100,1],[-100,-100,-100,1]])
-
-sHp=np.sin(pi/2)
-cHp=np.cos(pi/2)
-
-Lo=np.array([0,0,0,1])
 
 def bodyIK(omega,phi,psi,xm,ym,zm):
     Rx = np.array([[1,0,0,0],
@@ -104,8 +63,6 @@ def bodyIK(omega,phi,psi,xm,ym,zm):
         Tm @ np.array([[cHp,0,sHp,-L/2],[0,1,0,0],[-sHp,0,cHp,-W/2],[0,0,0,1]])
         ])
 
-# Initialize last_angles with some default values
-last_angles = [0, 0, 0]
 
 def legIK(point):
     global last_angles  # This allows us to modify last_angles inside this function
@@ -186,6 +143,52 @@ def drawRobot(Lp,angles,center):
     drawLegPair(Tlf,Trf,Lp[0],Lp[1])
     drawLegPair(Tlb,Trb,Lp[2],Lp[3])
     #print(Tlf,Tlb,Trb)
+
+
+# Initalise Variables and Setup
+ser = serial.Serial('COM5', 11500)#open coms. 
+time.sleep(3)
+
+# Define control points
+P0 = np.array([0, 0, 0]) + 50
+P1 = np.array([1, 2, 3]) + 50
+P2 = np.array([2, 3, 1]) + 50
+P3 = np.array([3, 0, 0]) + 50
+
+# Generate points along the Bezier curve
+t_values = np.linspace(0, 1, num=100)  # Parameter values
+points = [bezier_curve(t, P0, P1, P2, P3) for t in t_values]
+
+#%matplotlib notebook LEG INVERSE KINEMATICS:
+
+setupView(110).view_init(elev=20., azim=135)
+
+fig = plt.figure()
+pi= 3.14
+omega =  pi/4
+phi =0
+psi = 0
+
+xm = 0
+ym = 0
+zm = 0
+
+l1=25
+l2=20
+l3=80
+l4=80
+
+L = 120
+W = 90
+
+Lp=np.array([[100,-100,100,1],[100,-100,-100,1],[-100,-100,100,1],[-100,-100,-100,1]])
+
+sHp=np.sin(pi/2)
+cHp=np.cos(pi/2)
+
+Lo=np.array([0,0,0,1])
+# Initialize last_angles with some default values
+last_angles = [0, 0, 0]
 ##TO DO: modify serial write function and angles_deg function to output the 12 serperate resultant thetas.   
 pygame.init()
 
@@ -194,8 +197,8 @@ joystick = pygame.joystick.Joystick(0)
 joystick.init()
 
 fig = plt.figure()
-
-
+    
+    
 while True:
     # Process events
     for event in pygame.event.get():
@@ -205,7 +208,7 @@ while True:
 
     # Read the analog stick values
     A = joystick.get_axis(0)  # Left stick horizontal (left is -1, right is 1)
-    y = joystick.get_axis(1)*25  # Left stick vertical (up is -1, down is 1)
+    y = joystick.get_axis(1)*90  # Left stick vertical (up is -1, down is 1)
     x = joystick.get_axis(2)*30  # Right stick horizontal (left is -1, right is 1)
     C = joystick.get_axis(3)  # Right stick vertical (up is -1, down is 1)
     z = joystick.get_hat(0)[0]*70  # D-pad horizontal (left is -1, right is 1)
@@ -246,7 +249,7 @@ while True:
         send_command('E', -(angles_deg[4]-53))
         send_command('F', -angles_deg[5]+192)
         send_command('G', angles_deg[6]+74)
-        send_command('H', angles_deg[7]+162)
+        send_command('H', -(angles_deg[7]+15))
         send_command('I', angles_deg[8]-12)
         send_command('J', angles_deg[9]+131)
         send_command('K', angles_deg[10]+165)
@@ -254,9 +257,9 @@ while True:
 
 
     # Print all the angles
-        #print(angles_out)
-    else:
-        print("Error: Expected 12 angles, but got " + str(len(angles_out)))
+    print(angles_deg)
+   # else:
+   #     print("Error: Expected 12 angles, but got " + str(len(angles_out)))
     
 # Clear the input buffer
     ser.reset_input_buffer()
@@ -267,10 +270,14 @@ while True:
 # Decode the line and remove trailing newline
     line = line.decode('utf-8').rstrip()
 
-# Check if the line is the command you're waiting for
-    if "101107" in line:
-        print('got pos')
-        elseif: print('positioning failed')
+    # Check if the line is the command you're waiting for
+    while "101107" not in line:
+        # Read a line from the serial port
+        line = ser.readline()
+        # Decode the line and remove trailing newline
+        line = line.decode('utf-8').rstrip()
+        print('positioning failed')
+    print('got pos')
     plt.clf()
     ax = setupView(110)
     ax.view_init(elev=20., azim=135)
@@ -283,5 +290,4 @@ while True:
     plt.pause(0.00001)
  
     
-
 
